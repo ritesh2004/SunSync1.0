@@ -1,20 +1,28 @@
-import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import React, { useEffect } from 'react'
+import { Tabs } from './utilities/Tabs'
+import { useFonts } from 'expo-font'
+import { View } from 'react-native';
+import { ContextProvider } from './src/context/Appcontext';
+import { Loading } from './utilities/Loading';
 
-export default function App() {
+
+const App = () => {
+  const [fontsLoaded] = useFonts({
+    'poppins': require('./assets/fonts/Poppins-ExtraBold.ttf'),
+    'montserrat-light' : require('./assets/fonts/Montserrat-VariableFont_wght.ttf'),
+    'montserrat-bold' : require('./assets/fonts/Montserrat-Italic-VariableFont_wght.ttf'),
+  });
+
+  if (!fontsLoaded) {
+    return <Loading/>
+  }
   return (
-    <View style={styles.container}>
-      <Text>Open up App.js to start working on your app!</Text>
-      <StatusBar style="auto" />
+    <View style={{ flex: 1, fontFamily: 'poppins' }}>
+      <ContextProvider>
+        <Tabs />
+      </ContextProvider>
     </View>
-  );
+  )
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
+export default App
