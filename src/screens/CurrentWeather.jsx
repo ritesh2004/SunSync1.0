@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react';
-import { StyleSheet, Text, View, StatusBar, Image, TextInput, ScrollView, LogBox } from 'react-native';
+import { StyleSheet, Text, View, StatusBar, Image, TextInput, ScrollView, LogBox, Alert } from 'react-native';
 import { FontAwesome5, Entypo, Feather } from '@expo/vector-icons';
 import { DetailedForcast } from '../components/DetailedForcast';
 import { SunriseSet } from '../components/SunriseSet';
@@ -9,59 +9,83 @@ import { Appcontext } from '../context/Appcontext';
 import { weatherType } from '../../utilities/WeatherType';
 import { Loading } from '../../utilities/Loading';
 import { Error } from '../../utilities/Error';
-import * as Location from 'expo-location';
 
 
 
 export default function CurrentWeather() {
-  const [search, setSearch] = useState("");
-  const [city, setCity] = useState("");
-  const [icon, setIcon] = useState("");
-  const [weather, setWeather] = useState({});
-  const [loading, setLoading] = useState(false);
+  const [search, setSearch] = useState(""); // STATE FOR STORING SEARCHED QUERY
+  const [city, setCity] = useState(""); // FOR STORING CITY NAME
+  const [icon, setIcon] = useState(""); // FOR STORING WEATHER ICONS ACCORDING TO WEATHER CONDITIONS
+  const [weather, setWeather] = useState({}); // STATE FOR STORING WEATHER
+  const [loading, setLoading] = useState(false); // STATE FOR STORING DATA IS FETCHING OR NOT
+  const [isDay, setIsDay] = useState(true);  // STATE FOR STORING CURRENT LOCAL TIME IS A DATETIME OR NOT
 
-  const { location, setLocation,setError,error } = useContext(Appcontext);
+  // ACCESSING LOCATION DATA FROM APPCONTEXT
+  const { location, setLocation, setError, error } = useContext(Appcontext);
   const { lat, lon } = location;
 
+  // FUNCTION FOR CHEKING CURRENT TIME IS DATETIME OR NOT
+  const getDayOrNight = () => {
+    const hr = (new Date()).getHours();
+    console.log(hr)
+    if (hr > 6 && hr < 18) {
+      setIsDay(true)
+      console.log("Day time")
+    } else {
+      setIsDay(false)
+      console.log("Night time")
+    }
+  }
+
+  // FUNCTION FOR HANDLING SEARCHED QUERY
   const handleSearch = async (text) => {
     try {
       setLoading(true)
-      const weatherData = await GetCurrentUpdateCity(text);
+      const weatherData = await GetCurrentUpdateCity(text); // GETTING WEATHER UPDATE
       setCity(weatherData.name);
       setWeather(weatherData);
-      setLocation({ "lat": weatherData?.coord?.lat, "lon": weatherData?.coord?.lon })
+      setLocation({ "lat": weatherData.coord.lat, "lon": weatherData.coord.lon })
+      getDayOrNight();
+      setIcon(() => {
+        return (
+          weatherData.weather[0].main === "Clear" ? (isDay ? weatherType[weatherData.weather[0].main].icon : "moon") : weatherType[weatherData.weather[0].main].icon
+        )
+      })
+      // setIcon(weatherType[weatherData.weather[0].main].icon)
       setLoading(false)
       setError(false)
     } catch (error) {
+      Alert.alert("Sorry, we couldn't find weather information for the specified location. Please check the location and try again.")
+      setLoading(false)
       setError(true)
     }
   }
 
   useEffect(() => {
-    (async () => {
+    const fetchData = async () => {
       try {
         setLoading(true);
-        // Accessing location permition
-        let { status } = await Location.requestForegroundPermissionsAsync();
-        if (status !== 'granted') {
-            setErrorMsg('Permission to access location was denied');
-        }
-        // Fetching current location
-        let data = await Location.getCurrentPositionAsync({});
-        setLocation({"lat":data.coords.latitude,"lon":data.coords.longitude});
-        // console.log("Location",data.coords.latitude,data.coords.longitude)
         // Fetching current weather
-        const weatherData = await GetCurrentUpdateCoord(data.coords.latitude, data.coords.longitude);
+        const weatherData = await GetCurrentUpdateCoord(lat, lon);
         setCity(weatherData.name);
         setWeather(weatherData);
-        setIcon(weatherType[weatherData?.weather[0]?.main]?.icon)
+        getDayOrNight()
+        setIcon(() => {
+          return (
+            weatherData.weather[0].main === "Clear" ? (isDay ? weatherType[weatherData.weather[0].main].icon : "moon") : weatherType[weatherData.weather[0].main].icon
+          )
+        })
         setLoading(false)
         setError(false)
       } catch (error) {
+        Alert.alert("Sorry, we couldn't find weather information for the specified location. Please check the location and try again.")
+        setLoading(false)
         setError(true)
       }
-    })();
-  },[]);
+    }
+
+    fetchData()
+  }, [lat, lon]);
 
   return (
     <>
